@@ -1,37 +1,16 @@
-from django.http import HttpResponse, HttpRequest
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import generics, status
-from .models import RegularUser
 from django.contrib.auth.models import User
-
-
-class LoginView(APIView):
-    def post(self, request, format=None):
-        user = request.data['username']
-        password = request.data['password']
-
-        if user.strip() != "" and password.strip() != "":
-            try:
-                user_in_question = User.objects.get(email=user)
-
-                if user_in_question.check_password(password):
-                    return Response({"Success": "Correct username and password"}, status=status.HTTP_202_ACCEPTED)
-                else:
-                    return Response({"Error": "Incorrect password"}, status=status.HTTP_401_UNAUTHORIZED)
-            except User.DoesNotExist:
-                return Response({"Error": "No user with that email"}, status=status.HTTP_400_BAD_REQUEST)
-            except User.MultipleObjectsReturned:
-                return Response({"Error": "Multiple users with that email"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            return Response({"Error": "Blank username or password field"}, status=status.HTTP_400_BAD_REQUEST)
+from rest_framework.response import Response
+from accounts.models.regular_user import RegularUser
+from rest_framework import status
+from user_functionality.models.user_interests import UserInterests
+from user_functionality.models.interest import Interest
 
 
 class CreateAccountView(APIView):
     def post(self, request, format=None):
         # if account creation is successful then we redirect
         # to login page
-        print('sign up request received')
 
         first_name = request.data['first_name']
         last_name = request.data['last_name']
@@ -43,6 +22,11 @@ class CreateAccountView(APIView):
         phone_number = request.data['phone_number']
         password = request.data['password']
 
+        age = request.data['age']
+        preference = request.data['preference']
+
+        interests = request.data['interests']
+
         queryset = User.objects.filter(email=university_email)
         if queryset.exists():
             return Response({"Error": "A user with this email already exists"}, status=status.HTTP_400_BAD_REQUEST)
@@ -51,8 +35,15 @@ class CreateAccountView(APIView):
                             last_name=last_name)
             new_user.set_password(password)
             supplimental_information = RegularUser(user=new_user, university=university, year=year, gender=gender,
-                                                   short_bio=short_bio, phone_number=phone_number)
+                                                   short_bio=short_bio, phone_number=phone_number,
+                                                   age=int(age), preference=preference)
 
             new_user.save()
             supplimental_information.save()
+
+            for user_interest in interests:
+                existing_interest = Interest.objects.get(name=user_interest)
+                new_joint_table_entry = UserInterests(user=supplimental_information, interest=existing_interest)
+                new_joint_table_entry.save()
+
             return Response({'Success': 'account successfully created'}, status=status.HTTP_201_CREATED)

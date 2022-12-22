@@ -13,6 +13,9 @@ class RegularUser(AbstractBaseUser):
     short_bio = models.CharField(max_length=200, blank=True)
     phone_number = models.CharField(max_length=15, blank=True)
 
+    age = models.IntegerField()
+    preference = models.CharField(max_length=20, blank=True)
+
     def get_university(self):
         return self.university.__str__()
 
